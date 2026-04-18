@@ -14,6 +14,6 @@ setInterval(() => {
     if (client.readyState !== WebSocket.OPEN) continue;
     client.send("Hello there");
   }
-}, 1000);
+}, 2000);
 
 console.log(`Listening on port ${port}`);

@@ -4,8 +4,12 @@
     "game/client",
     "game/server"
   ],
+  "scripts": {
+    "start": "concurrently \"npm -w client start\" \"npm -w server start\""
+  },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-prettier": "^5.2.6",

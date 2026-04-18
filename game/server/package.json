@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx --watch src/app"
+    "start": "tsx --watch --watch-preserve-output src/app"
   },
   "author": "",
   "license": "ISC",
