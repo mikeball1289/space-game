@@ -1,4 +1,5 @@
 import { Application, Assets, Sprite } from "pixi.js";
+import { connect } from "./net/socket";
 
 (async () => {
   // Create a new application
@@ -32,4 +33,6 @@ import { Application, Assets, Sprite } from "pixi.js";
     // * Creates frame-independent transformation *
     bunny.rotation += 0.1 * time.deltaTime;
   });
+
+  connect();
 })();

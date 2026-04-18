@@ -4,8 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx src/app"
+    "start": "tsx --watch src/app"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "ws": "^8.20.0"
+  }
 }
