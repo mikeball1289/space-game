@@ -1,12 +1,19 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket, type ClientOptions } from "ws";
 
 const port = 8080;
+class WebSocketWithId extends WebSocket {
+  id = crypto.randomUUID();
+}
 
-const wss = new WebSocketServer({ port });
+const wss = new WebSocketServer({ port, WebSocket: WebSocketWithId });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws: WebSocketWithId) => {
   ws.on("error", console.error);
   ws.on("message", (data) => console.log(data.toString()));
+  ws.send(JSON.stringify({
+    type: "id",
+    id: ws.id,
+  }))
 });
 
 setInterval(() => {
