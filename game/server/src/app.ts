@@ -6,6 +6,8 @@ interface Player {
   x: number;
   y: number;
   rotation: number;
+  vx: number;
+  vy: number;
 }
 
 const players: Record<string, Player> = {};
@@ -30,9 +32,8 @@ wss.on("connection", (ws: WebSocketWithId) => {
     const message = JSON.parse(data.toString());
 
     if (message.type === "position") {
-      players[ws.id].x = message.x;
-      players[ws.id].y = message.y;
-      players[ws.id].rotation = message.rotation;
+      const { type: _type, ...data } = message;
+      Object.assign(players[ws.id], data);
     }
   });
   ws.on("close", () => {
@@ -47,7 +48,7 @@ wss.on("connection", (ws: WebSocketWithId) => {
     }),
   );
 
-  players[ws.id] = { x: 800, y: 450, rotation: 0 };
+  players[ws.id] = { x: 800, y: 450, rotation: 0, vx: 0, vy: 0 };
 
   broadcast(
     JSON.stringify({

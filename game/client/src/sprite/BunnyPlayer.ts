@@ -1,15 +1,17 @@
 import { Point, Texture, Ticker } from "pixi.js";
-import { GameSprite } from "./GameSprite";
-import { mouse, MouseButton } from "../input/Mouse";
-import {
-  angleBetween,
-  normalizeAngle,
-  unitVectorFromAngle,
-} from "../math/angle";
-import { keyboard } from "../input/Keyboard";
 import { app } from "../root/app";
+import { InertialSprite } from "./InertialSprite";
+import { Serial } from "../net/Serial";
 
-export class BunnyPlayer extends GameSprite {
+interface PlayerData {
+  x: number;
+  y: number;
+  rotation: number;
+  vx: number;
+  vy: number;
+}
+
+export class BunnyPlayer extends InertialSprite implements Serial<PlayerData> {
   velocity = new Point();
 
   constructor(playerTexture: Texture) {
@@ -17,34 +19,26 @@ export class BunnyPlayer extends GameSprite {
     this.anchor.set(0.5);
   }
 
+  serialize(): PlayerData {
+    return {
+      x: this.x,
+      y: this.y,
+      rotation: this.rotation,
+      vx: this.velocity.x,
+      vy: this.velocity.y,
+    };
+  }
+
+  deserialize(data: PlayerData): void {
+    this.x = data.x;
+    this.y = data.y;
+    this.rotation = data.rotation;
+    this.velocity.x = data.vx;
+    this.velocity.y = data.vy;
+  }
+
   tick(time: Ticker): void {
-    const mousePosition = mouse.getPosition();
-
-    const rot = angleBetween(this.position, mousePosition);
-    const rotationAmount = 0.1 * time.deltaTime;
-
-    const drot = normalizeAngle(rot - this.rotation + Math.PI);
-
-    if (Math.abs(drot - Math.PI) < rotationAmount) {
-      this.rotation = rot;
-    } else if (drot > Math.PI) {
-      this.rotation += rotationAmount;
-    } else {
-      this.rotation -= rotationAmount;
-    }
-
-    if (mouse.isButtonDown(MouseButton.LEFT) || keyboard.isKeyDown("KeyW")) {
-      const acceleration = unitVectorFromAngle(this.rotation).multiplyScalar(
-        time.deltaTime * 0.25,
-      );
-
-      this.velocity.add(acceleration, this.velocity);
-    }
-
-    this.position.add(
-      this.velocity.multiplyScalar(time.deltaTime),
-      this.position,
-    );
+    super.tick(time);
 
     if (this.x < 0) {
       this.x = 0;

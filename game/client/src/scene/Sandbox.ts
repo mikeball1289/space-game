@@ -1,20 +1,21 @@
-import { Assets, Sprite, Texture, Ticker } from "pixi.js";
+import { Assets, Texture, Ticker } from "pixi.js";
 import { Scene } from "./Scene";
 import { BunnyPlayer } from "../sprite/BunnyPlayer";
 import { app } from "../root/app";
 import { connect } from "../net/socket";
+import { ControllerPlayer } from "../sprite/ControllerPlayer";
 
 export class Sandbox extends Scene {
   private bunnyTexture!: Texture;
-  private player!: BunnyPlayer;
+  private player!: ControllerPlayer;
   private playerId: string | undefined;
   private ws!: WebSocket;
 
-  otherPlayers: Record<string, Sprite> = {};
+  otherPlayers: Record<string, BunnyPlayer> = {};
 
   async load() {
     this.bunnyTexture = await Assets.load<Texture>("/assets/bunny.png");
-    this.player = new BunnyPlayer(this.bunnyTexture);
+    this.player = new ControllerPlayer(this.bunnyTexture);
 
     this.player.position.set(app.screen.width / 2, app.screen.height / 2);
     this.addChild(this.player);
@@ -27,21 +28,18 @@ export class Sandbox extends Scene {
     if (message.type === "id") {
       this.playerId = message.id;
       for (const playerId in message.players) {
-        const playerSprite = new Sprite(this.bunnyTexture);
-        playerSprite.x = message.players[playerId].x;
-        playerSprite.y = message.players[playerId].y;
-        playerSprite.rotation = message.players[playerId].rotation;
-        playerSprite.anchor.set(0.5);
+        const playerSprite = new BunnyPlayer(this.bunnyTexture);
+        const playerData = message.players[playerId];
+        playerSprite.deserialize(playerData);
         app.stage.addChild(playerSprite);
         this.otherPlayers[playerId] = playerSprite;
       }
     }
 
     if (message.type === "newPlayer") {
-      const playerSprite = new Sprite(this.bunnyTexture);
+      const playerSprite = new BunnyPlayer(this.bunnyTexture);
       playerSprite.x = 800;
       playerSprite.y = 450;
-      playerSprite.anchor.set(0.5);
       app.stage.addChild(playerSprite);
       this.otherPlayers[message.id] = playerSprite;
     }
@@ -54,27 +52,24 @@ export class Sandbox extends Scene {
 
     if (message.type === "players") {
       for (const playerId in message.players) {
-        if (playerId === this.playerId || !this.otherPlayers[playerId])
-          continue;
+        if (playerId === this.playerId || !this.otherPlayers[playerId]) continue;
 
-        this.otherPlayers[playerId].x = message.players[playerId].x;
-        this.otherPlayers[playerId].y = message.players[playerId].y;
-        this.otherPlayers[playerId].rotation =
-          message.players[playerId].rotation;
+        this.otherPlayers[playerId].deserialize(message.players[playerId]);
       }
     }
   }
 
   tick(time: Ticker) {
     this.player.tick(time);
+    for (const otherPlayer of Object.values(this.otherPlayers)) {
+      otherPlayer.tick(time);
+    }
 
     if (this.ws.readyState === this.ws.OPEN) {
       this.ws.send(
         JSON.stringify({
           type: "position",
-          x: this.player.x,
-          y: this.player.y,
-          rotation: this.player.rotation,
+          ...this.player.serialize(),
         }),
       );
     }
