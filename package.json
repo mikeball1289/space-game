@@ -2,7 +2,8 @@
   "name": "space-game",
   "workspaces": [
     "game/client",
-    "game/server"
+    "game/server",
+    "game/common"
   ],
   "scripts": {
     "start": "concurrently \"npm -w client start\" \"npm -w server start\""

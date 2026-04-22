@@ -2,14 +2,15 @@ import { Assets, Texture, Ticker } from "pixi.js";
 import { Scene } from "./Scene";
 import { BunnyPlayer } from "../sprite/BunnyPlayer";
 import { app } from "../root/app";
-import { connect } from "../net/socket";
+import { connect, WSHandle } from "../net/socket";
 import { ControllerPlayer } from "../sprite/ControllerPlayer";
+import { GameMessage } from "@common/types/net-objects";
 
 export class Sandbox extends Scene {
   private bunnyTexture!: Texture;
   private player!: ControllerPlayer;
   private playerId: string | undefined;
-  private ws!: WebSocket;
+  private ws!: WSHandle;
 
   otherPlayers: Record<string, BunnyPlayer> = {};
 
@@ -20,41 +21,43 @@ export class Sandbox extends Scene {
     this.player.position.set(app.screen.width / 2, app.screen.height / 2);
     this.addChild(this.player);
 
-    this.ws = connect((data) => this.onMessage(JSON.parse(data)));
+    this.ws = connect((data) => this.onMessage(data));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onMessage(message: any) {
-    if (message.type === "id") {
-      this.playerId = message.id;
-      for (const playerId in message.players) {
+  onMessage({ type, payload }: GameMessage) {
+    if (type === "welcome") {
+      this.playerId = payload.id;
+      for (const playerId in payload.players) {
         const playerSprite = new BunnyPlayer(this.bunnyTexture);
-        const playerData = message.players[playerId];
+        const playerData = payload.players[playerId];
+        if (!playerData) continue;
         playerSprite.deserialize(playerData);
         app.stage.addChild(playerSprite);
         this.otherPlayers[playerId] = playerSprite;
       }
     }
 
-    if (message.type === "newPlayer") {
+    if (type === "new_player") {
       const playerSprite = new BunnyPlayer(this.bunnyTexture);
-      playerSprite.x = 800;
-      playerSprite.y = 450;
+      playerSprite.deserialize(payload.data);
       app.stage.addChild(playerSprite);
-      this.otherPlayers[message.id] = playerSprite;
+      this.otherPlayers[payload.id] = playerSprite;
     }
 
-    if (message.type === "playerLeave") {
-      app.stage.removeChild(this.otherPlayers[message.id]);
-      this.otherPlayers[message.id].destroy();
-      delete this.otherPlayers[message.id];
+    if (type === "player_leave") {
+      const playerSprite = this.otherPlayers[payload.id];
+      delete this.otherPlayers[payload.id];
+      if (!playerSprite) return;
+      app.stage.removeChild(playerSprite);
+      playerSprite.destroy();
     }
 
-    if (message.type === "players") {
-      for (const playerId in message.players) {
+    if (type === "tick") {
+      for (const [playerId, playerData] of Object.entries(payload)) {
+        console.log(playerId, playerData);
         if (playerId === this.playerId || !this.otherPlayers[playerId]) continue;
 
-        this.otherPlayers[playerId].deserialize(message.players[playerId]);
+        this.otherPlayers[playerId].deserialize(playerData);
       }
     }
   }
@@ -65,13 +68,9 @@ export class Sandbox extends Scene {
       otherPlayer.tick(time);
     }
 
-    if (this.ws.readyState === this.ws.OPEN) {
-      this.ws.send(
-        JSON.stringify({
-          type: "position",
-          ...this.player.serialize(),
-        }),
-      );
-    }
+    this.ws.send({
+      type: "update_player",
+      payload: this.player.serialize(),
+    });
   }
 }

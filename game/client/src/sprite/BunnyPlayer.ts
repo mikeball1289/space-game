@@ -2,14 +2,7 @@ import { Point, Texture, Ticker } from "pixi.js";
 import { app } from "../root/app";
 import { InertialSprite } from "./InertialSprite";
 import { Serial } from "../net/Serial";
-
-interface PlayerData {
-  x: number;
-  y: number;
-  rotation: number;
-  vx: number;
-  vy: number;
-}
+import { PlayerData } from "@common/types/net-objects";
 
 export class BunnyPlayer extends InertialSprite implements Serial<PlayerData> {
   velocity = new Point();
