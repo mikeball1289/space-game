@@ -1,9 +1,15 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
-import { type GameMessage, type Players } from "@common/types/net-objects";
+import { MS_PER_TICK, type GameMessage, type PlayerData } from "@common/types/NetObjects";
+import { Spaceship } from "@common/game/Spaceship";
+import { Vec2 } from "@common/math/vector";
+import { Game } from "./Game";
+import { Bullet } from "@common/game/Bullet";
 
+const _CLIENT_LENIENCE = MS_PER_TICK / 500;
+const CLIENT_LENIENCE_2 = (MS_PER_TICK / 500) ** 2;
 const port = 8080;
 
-const players: Players = {};
+const game = new Game();
 
 class WebSocketWithId extends WebSocket {
   id = crypto.randomUUID();
@@ -28,38 +34,60 @@ const broadcast = (message: GameMessage, deafen: string[] = []) => {
   }
 };
 
+function playerMovementConflict(player: Spaceship, playerData: PlayerData) {
+  const speedSquared = new Vec2(playerData.vx, playerData.vy).abs2;
+  const dPosSquared = player.position.add(new Vec2(playerData.x, playerData.y).multiplyScalar(-1)).abs2;
+
+  if (speedSquared * CLIENT_LENIENCE_2 < dPosSquared) return true;
+
+  return false;
+}
+
 wss.on("connection", (ws: WebSocketWithId) => {
   ws.on("error", console.error);
   ws.on("message", (data) => {
     const message = ws.parseMessage(data);
 
     if (message.type === "update_player") {
-      const playerData = players[ws.id];
+      const playerData = game.players[ws.id];
       if (!playerData) return;
-      Object.assign(playerData, message.payload);
+      if (playerMovementConflict(playerData, message.payload)) {
+        ws.sendObject({
+          type: "sync",
+          payload: playerData.serialize(),
+        });
+      } else {
+        playerData.deserialize(message.payload);
+      }
+    }
+
+    if (message.type === "shoot") {
+      const projectile = new Bullet(message.payload.id, undefined);
+      projectile.deserialize(message.payload);
+      game.projectiles[projectile.id] = projectile;
     }
   });
   ws.on("close", () => {
     broadcast({ type: "player_leave", payload: { id: ws.id } });
-    delete players[ws.id];
+    delete game.players[ws.id];
   });
+
+  const newPlayer = game.addPlayer(ws.id);
+
   ws.sendObject({
     type: "welcome",
     payload: {
       id: ws.id,
-      players,
+      gameState: game.gameState,
     },
   });
-
-  const newPlayerData = { x: 800, y: 450, rotation: 0, vx: 0, vy: 0 };
-  players[ws.id] = newPlayerData;
 
   broadcast(
     {
       type: "new_player",
       payload: {
         id: ws.id,
-        data: newPlayerData,
+        data: newPlayer.serialize(),
       },
     },
     [ws.id],
@@ -67,7 +95,12 @@ wss.on("connection", (ws: WebSocketWithId) => {
 });
 
 setInterval(() => {
-  broadcast({ type: "tick", payload: players });
-}, 50);
+  game.tick(MS_PER_TICK / 1000);
+
+  broadcast({
+    type: "tick",
+    payload: game.gameState,
+  });
+}, MS_PER_TICK);
 
 console.log(`Listening on port ${port}`);

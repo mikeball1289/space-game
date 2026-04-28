@@ -1,4 +1,4 @@
-import { GameMessage } from "@common/types/net-objects";
+import { GameMessage } from "@common/types/NetObjects";
 
 export type WSHandle = {
   send: (data: GameMessage) => void;
@@ -9,7 +9,9 @@ export type WSHandle = {
 export function connect(onMessage: (data: GameMessage) => void): WSHandle {
   const ws = new WebSocket("ws://localhost:8080");
   ws.onerror = console.error;
-  ws.onmessage = (data: MessageEvent<string>) => onMessage(JSON.parse(data.data));
+  ws.onmessage = (data: MessageEvent<string>) => {
+    setTimeout(() => onMessage(JSON.parse(data.data)), 150);
+  };
 
   return {
     isOpen: () => ws.readyState === ws.OPEN,

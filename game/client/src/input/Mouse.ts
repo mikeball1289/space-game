@@ -1,4 +1,5 @@
-import { Application, Point, Renderer } from "pixi.js";
+import { Vec2 } from "@common/math/vector";
+import { Application, Renderer } from "pixi.js";
 
 export const MouseButton = {
   LEFT: 0,
@@ -9,7 +10,7 @@ export const MouseButton = {
 export type MouseButton = (typeof MouseButton)[keyof typeof MouseButton];
 
 class Mouse {
-  private position = new Point();
+  private position = new Vec2();
   private mouseButtons: Record<number, boolean> = {};
 
   init(app: Application<Renderer>) {
@@ -17,13 +18,9 @@ class Mouse {
       const canvasBounds = app.canvas.getBoundingClientRect();
       const screenBounds = app.screen.getBounds();
 
-      this.position.x =
-        (event.clientX - canvasBounds.left) *
-        (screenBounds.width / canvasBounds.width);
+      this.position.x = (event.clientX - canvasBounds.left) * (screenBounds.width / canvasBounds.width);
 
-      this.position.y =
-        (event.clientY - canvasBounds.top) *
-        (screenBounds.height / canvasBounds.height);
+      this.position.y = (event.clientY - canvasBounds.top) * (screenBounds.height / canvasBounds.height);
     });
 
     document.addEventListener("mousedown", (event) => {
@@ -43,7 +40,7 @@ class Mouse {
     return Boolean(this.mouseButtons[button]);
   }
 
-  getPosition(): Point {
+  getPosition() {
     return this.position;
   }
 }
