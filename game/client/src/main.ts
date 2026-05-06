@@ -14,6 +14,7 @@ async function main() {
     },
     width: 1600,
     height: 900,
+    resolution: window.devicePixelRatio || 1,
   });
 
   keyboard.init();

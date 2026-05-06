@@ -19,11 +19,13 @@ export class Sandbox extends Scene {
   projectiles: Record<string, Projectile> = {};
 
   async load() {
-    this.bunnyTexture = await Assets.load<Texture>("/assets/bunny.png");
+    this.bunnyTexture = await Assets.load({ src: "/assets/spaceship3.svg", data: { resolution: 5 } });
+
     this.pelletTexture = await Assets.load<Texture>("/assets/pellet.png");
     this.player = new ControllerPlayer(this);
 
     this.player.sprite.position.set(app.screen.width / 2, app.screen.height / 2);
+
     this.addChild(this.player.sprite);
 
     this.ws = connect((data) => this.onMessage(data));
